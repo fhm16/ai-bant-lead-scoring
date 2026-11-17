@@ -1,0 +1,327 @@
+{
+  "name": "BANT Lead Routing System",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "BANT Lead Qualification Form",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Budget",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "$500 below"
+                  },
+                  {
+                    "option": "$500-$1000"
+                  },
+                  {
+                    "option": "$1000+"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Authority",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Timeline",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "1 month"
+                  },
+                  {
+                    "option": "3 month"
+                  },
+                  {
+                    "option": "Not Sure"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a44c7103-48b9-4813-8063-ef31f51a5153",
+      "name": "On form submission",
+      "webhookId": "YOUR_FORM_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert Lead Qualification AI. Analyze the following lead details based on the BANT framework:\n\n- Budget: {{ $json.Budget }}\n- Authority: {{ $json.Authority }}\n- Timeline: {{ $json.Timeline }}\n\nRules for Scoring:\n1. Budget: Above $1000 = High, $500-$1000 = Medium, Below $500 = Low.\n2. Authority: Yes = High, No = Low.\n3. Timeline: 1 Month = High, 3 Months = Medium, Not Sure = Low.\n\nEvaluate these details and respond ONLY in valid JSON format with no extra text or markdown codeblocks:\n{\n  \"score\": <number between 0 and 100>,\n  \"status\": \"<HOT or COLD>\",\n  \"reason\": \"<one sentence explanation in English or Bengali>\"\n}\nIf score >= 60 set status to \"HOT\", otherwise \"COLD\"."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "aa810901-a62d-4090-8263-71828c933963",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.content.parts[0].text).status }}",
+                    "rightValue": "HOT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "41ca6894-50aa-46db-b817-8eda5ced79f6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HOT Lead"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        576,
+        0
+      ],
+      "id": "55b095d5-6d6c-482b-b72c-1ae794eacd58",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "your-sales-team@example.com",
+        "subject": "=🔥 New HOT Lead Alert: Score {{ JSON.parse($node[\"Message a model\"].json.content.parts[0].text).score }}/100",
+        "emailType": "text",
+        "message": "=টিমের জন্য নতুন একটি HOT Lead নোটিফিকেশন!  --- লিডের তথ্য (Form Submission) --- • Budget: {{ $node[\"On form submission\"].json.Budget }} • Authority: {{ $node[\"On form submission\"].json.Authority }} • Timeline: {{ $node[\"On form submission\"].json.Timeline }}  --- এআই বিশ্লেষণ (Gemini AI) --- • BANT Score: {{ JSON.parse($node[\"Message a model\"].json.content.parts[0].text).score }}/100 • Status: {{ JSON.parse($node[\"Message a model\"].json.content.parts[0].text).status }} • Reason: {{ JSON.parse($node[\"Message a model\"].json.content.parts[0].text).reason }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        -96
+      ],
+      "id": "19825ab3-4e13-4057-a050-660ee4ee564c",
+      "name": "Send a message",
+      "webhookId": "YOUR_GMAIL_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "COLD Lead List",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "COLD Lead List",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Budget": "={{ $node[\"On form submission\"].json.Budget }}",
+            "Authority": "={{ $node[\"On form submission\"].json.Authority }}",
+            "Timeline": "={{ $node[\"On form submission\"].json.Timeline }}",
+            "Score": "={{ JSON.parse($node[\"Message a model\"].json.content.parts[0].text).score }}",
+            "Reason": "={{ JSON.parse($node[\"Message a model\"].json.content.parts[0].text).reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Authority",
+              "displayName": "Authority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timeline",
+              "displayName": "Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        96
+      ],
+      "id": "a333c34a-5494-4346-aaee-4ef2d2a0b430",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "YOUR_WORKFLOW_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}

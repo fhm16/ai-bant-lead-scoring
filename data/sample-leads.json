@@ -1,0 +1,46 @@
+{
+  "test_cases": [
+    {
+      "scenario": "HOT Lead Test Case",
+      "form_input": {
+        "Budget": "$1000+",
+        "Authority": "Yes",
+        "Timeline": "1 month"
+      },
+      "expected_ai_output": {
+        "score": 85,
+        "status": "HOT",
+        "reason": "High budget, decision-making authority, and immediate 1-month timeline."
+      },
+      "routed_to": "Gmail (HOT Lead Alert)"
+    },
+    {
+      "scenario": "Edge Case (High Authority & Urgent Timeline)",
+      "form_input": {
+        "Budget": "$500 below",
+        "Authority": "Yes",
+        "Timeline": "1 month"
+      },
+      "expected_ai_output": {
+        "score": 70,
+        "status": "HOT",
+        "reason": "The lead has decision-making authority and an immediate timeline, which outweighs the low budget."
+      },
+      "routed_to": "Gmail (HOT Lead Alert)"
+    },
+    {
+      "scenario": "COLD Lead Test Case",
+      "form_input": {
+        "Budget": "$500 below",
+        "Authority": "No",
+        "Timeline": "Not sure"
+      },
+      "expected_ai_output": {
+        "score": 20,
+        "status": "COLD",
+        "reason": "Low budget, no decision-making authority, and uncertain timeline."
+      },
+      "routed_to": "Google Sheets (Fallback Log)"
+    }
+  ]
+}

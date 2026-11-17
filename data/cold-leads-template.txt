@@ -1,0 +1,2 @@
+Budget,Authority,Timeline,Score,Reason
+$500 below,No,Not sure,20,"Low budget, no decision-making authority, and uncertain timeline."
